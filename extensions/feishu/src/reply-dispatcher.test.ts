@@ -300,7 +300,6 @@ describe("createFeishuReplyDispatcher streaming behavior", () => {
     expect(sendMessageFeishuMock).not.toHaveBeenCalled();
     expect(sendMarkdownCardFeishuMock).not.toHaveBeenCalled();
   });
-
   it("suppresses duplicate final text while still sending media", async () => {
     resolveFeishuAccountMock.mockReturnValue({
       accountId: "main",
