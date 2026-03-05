@@ -21,6 +21,7 @@ describe("mergeStreamingText", () => {
     expect(mergeStreamingText("revision_id: 552", "2，一点变化都没有")).toBe(
       "revision_id: 552，一点变化都没有",
     );
+    expect(mergeStreamingText("abc", "cabc")).toBe("cabc");
   });
 });
 

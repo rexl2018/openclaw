@@ -110,6 +110,12 @@ export function mergeStreamingText(
   if (previous.startsWith(next)) {
     return previous;
   }
+  if (next.includes(previous)) {
+    return next;
+  }
+  if (previous.includes(next)) {
+    return previous;
+  }
 
   // Merge partial overlaps, e.g. "这" + "这是" => "这是".
   const maxOverlap = Math.min(previous.length, next.length);
@@ -117,13 +123,6 @@ export function mergeStreamingText(
     if (previous.slice(-overlap) === next.slice(0, overlap)) {
       return `${previous}${next.slice(overlap)}`;
     }
-  }
-
-  if (next.includes(previous)) {
-    return next;
-  }
-  if (previous.includes(next)) {
-    return previous;
   }
   // Fallback for fragmented partial chunks: append as-is to avoid losing tokens.
   return `${previous}${next}`;
