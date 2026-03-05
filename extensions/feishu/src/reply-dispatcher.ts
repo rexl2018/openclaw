@@ -143,7 +143,6 @@ export function createFeishuReplyDispatcher(params: CreateFeishuReplyDispatcherP
   let streaming: FeishuStreamingSession | null = null;
   let streamText = "";
   let lastPartial = "";
-  let streamingFinalClosed = false;
   const deliveredFinalTexts = new Set<string>();
   let partialUpdateQueue: Promise<void> = Promise.resolve();
   let streamingStartPromise: Promise<void> | null = null;
@@ -231,7 +230,6 @@ export function createFeishuReplyDispatcher(params: CreateFeishuReplyDispatcherP
       responsePrefixContextProvider: prefixContext.responsePrefixContextProvider,
       humanDelay: core.channel.reply.resolveHumanDelayConfig(cfg, agentId),
       onReplyStart: () => {
-        streamingFinalClosed = false;
         deliveredFinalTexts.clear();
         if (streamingEnabled && renderMode === "card") {
           startStreaming();
@@ -249,9 +247,7 @@ export function createFeishuReplyDispatcher(params: CreateFeishuReplyDispatcherP
         const hasText = Boolean(text.trim());
         const hasMedia = mediaList.length > 0;
         const skipTextForDuplicateFinal =
-          info?.kind === "final" &&
-          hasText &&
-          (streamingFinalClosed || deliveredFinalTexts.has(text));
+          info?.kind === "final" && hasText && deliveredFinalTexts.has(text);
         const shouldDeliverText = hasText && !skipTextForDuplicateFinal;
 
         if (!shouldDeliverText && !hasMedia) {
@@ -289,7 +285,6 @@ export function createFeishuReplyDispatcher(params: CreateFeishuReplyDispatcherP
             if (info?.kind === "final") {
               streamText = mergeStreamingText(streamText, text);
               await closeStreaming();
-              streamingFinalClosed = true;
               deliveredFinalTexts.add(text);
             }
             // Send media even when streaming handled the text
