@@ -143,7 +143,8 @@ export function createFeishuReplyDispatcher(params: CreateFeishuReplyDispatcherP
   let streaming: FeishuStreamingSession | null = null;
   let streamText = "";
   let lastPartial = "";
-  let lastFinalText: string | null = null;
+  let streamingFinalClosed = false;
+  const deliveredFinalTexts = new Set<string>();
   let partialUpdateQueue: Promise<void> = Promise.resolve();
   let streamingStartPromise: Promise<void> | null = null;
   type StreamTextUpdateMode = "snapshot" | "delta";
@@ -230,7 +231,8 @@ export function createFeishuReplyDispatcher(params: CreateFeishuReplyDispatcherP
       responsePrefixContextProvider: prefixContext.responsePrefixContextProvider,
       humanDelay: core.channel.reply.resolveHumanDelayConfig(cfg, agentId),
       onReplyStart: () => {
-        lastFinalText = null;
+        streamingFinalClosed = false;
+        deliveredFinalTexts.clear();
         if (streamingEnabled && renderMode === "card") {
           startStreaming();
         }
@@ -246,10 +248,10 @@ export function createFeishuReplyDispatcher(params: CreateFeishuReplyDispatcherP
               : [];
         const hasText = Boolean(text.trim());
         const hasMedia = mediaList.length > 0;
-        // Suppress only exact duplicate final text payloads to avoid
-        // dropping legitimate multi-part final replies.
         const skipTextForDuplicateFinal =
-          info?.kind === "final" && hasText && lastFinalText === text;
+          info?.kind === "final" &&
+          hasText &&
+          (streamingFinalClosed || deliveredFinalTexts.has(text));
         const shouldDeliverText = hasText && !skipTextForDuplicateFinal;
 
         if (!shouldDeliverText && !hasMedia) {
@@ -287,7 +289,8 @@ export function createFeishuReplyDispatcher(params: CreateFeishuReplyDispatcherP
             if (info?.kind === "final") {
               streamText = mergeStreamingText(streamText, text);
               await closeStreaming();
-              lastFinalText = text;
+              streamingFinalClosed = true;
+              deliveredFinalTexts.add(text);
             }
             // Send media even when streaming handled the text
             if (hasMedia) {
@@ -324,7 +327,7 @@ export function createFeishuReplyDispatcher(params: CreateFeishuReplyDispatcherP
               first = false;
             }
             if (info?.kind === "final") {
-              lastFinalText = text;
+              deliveredFinalTexts.add(text);
             }
           } else {
             const converted = core.channel.text.convertMarkdownTables(text, tableMode);
@@ -345,7 +348,7 @@ export function createFeishuReplyDispatcher(params: CreateFeishuReplyDispatcherP
               first = false;
             }
             if (info?.kind === "final") {
-              lastFinalText = text;
+              deliveredFinalTexts.add(text);
             }
           }
         }
